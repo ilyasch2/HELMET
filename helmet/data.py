@@ -14,7 +14,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 import re
-from utils import calculate_metrics, parse_output, parse_rankings, calculate_retrieval_metrics
+from helmet.utils import calculate_metrics, parse_output, parse_rankings, calculate_retrieval_metrics
 
 import logging
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
