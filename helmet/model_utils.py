@@ -586,7 +586,6 @@ class HFModel(LLM):
     def generate(self, inputs=None, prompt=None, **kwargs):
         if inputs is None:
             inputs = self.tokenizer([prompt], return_tensors="pt", max_length=self.max_length-self.generation_max_length, truncation=True, padding=True)
-        
         inputs = inputs.to(self.model.device)
         input_len = inputs.input_ids.size(1)
         if hasattr(self.model, "model") and not self.disable_prefill:
@@ -604,6 +603,7 @@ class HFModel(LLM):
                 self.disable_prefill = True
                 logger.warning("past key values is None, not able to prefill with KVs, disabling...")
 
+        print("6666666")
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=self.generation_max_length,
