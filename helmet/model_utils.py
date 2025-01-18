@@ -545,10 +545,10 @@ class HFModel(LLM):
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name, 
             config=config,
-            torch_dtype=kwargs.get("torch_dtype", torch.bfloat16),
+            torch_dtype= torch.bfloat16,
             device_map="auto",
             trust_remote_code=True,
-            **model_kwargs
+            # **model_kwargs
         )
         if kwargs.get("torch_compile", True):
             self.model = torch.compile(self.model)
