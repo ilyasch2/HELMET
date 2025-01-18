@@ -721,6 +721,8 @@ def load_LLM(args):
             kwargs["torch_dtype"] = torch.float32
         if args.rope_theta is not None:
             kwargs["rope_theta"] = args.rope_theta
+        if args.rope_theta is not None:
+            kwargs["attn_implementation"] = args.attn_implementation
      
     model = model_cls(
         args.model_name_or_path, 
