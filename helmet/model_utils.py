@@ -1,6 +1,6 @@
 import os
 import time
-
+import gc
 import torch
 from transformers import PreTrainedTokenizer
 import functools
@@ -588,7 +588,7 @@ class HFModel(LLM):
             inputs = self.tokenizer([prompt], return_tensors="pt", max_length=self.max_length-self.generation_max_length, truncation=True, padding=True)
         inputs = inputs.to(self.model.device)
         input_len = inputs.input_ids.size(1)
-        if hasattr(self.model, "model") and not self.disable_prefill:
+        if (hasattr(self.model, "model") or hasattr(self.model, "backbone")) and not self.disable_prefill:
             # prefill without calculating the logits (save memory for large vocab models)
             extra = {}
             if "jamba" in str(type(self.model)).lower():
@@ -596,14 +596,24 @@ class HFModel(LLM):
                 cache = HybridMambaAttentionDynamicCache(self.model.config, inputs.input_ids.shape[0], self.model.dtype, device=self.model.device)
                 extra = {"past_key_values": cache}
 
-            prefill = self.model.model(input_ids=inputs.input_ids[..., :-1], attention_mask=inputs.attention_mask[..., :-1], **extra)
-            past_key_values = prefill.past_key_values
-            inputs = {"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask, "past_key_values": past_key_values}
+            if hasattr(self.model, "model"):
+                prefill = self.model.model(input_ids=inputs.input_ids[..., :-1], attention_mask=inputs.attention_mask[..., :-1], **extra)
+            else:
+                prefill = self.model.backbone(input_ids=inputs.input_ids[..., :-1], attention_mask=inputs.attention_mask[..., :-1], **extra)
+            past_key_values = prefill.past_key_values if hasattr(prefill, "past_key_values") else prefill.cache_params
+            inputs = {"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask}
+
+            if hasattr(prefill, "past_key_values"):
+                inputs["past_key_values"] = past_key_values
+            else:
+                inputs["cache_params"] = past_key_values
+
             if past_key_values is None:
                 self.disable_prefill = True
                 logger.warning("past key values is None, not able to prefill with KVs, disabling...")
-
-        print("6666666")
+        torch.cuda.empty_cache()
+        gc.collect()
+        print("***Generating...666 ;)***")
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=self.generation_max_length,
@@ -722,7 +732,9 @@ def load_LLM(args):
         if args.rope_theta is not None:
             kwargs["rope_theta"] = args.rope_theta
         if args.rope_theta is not None:
-            kwargs["attn_implementation"] = args.attn_implementation
+            kwargs["rope_theta"] = args.rope_theta
+
+        kwargs["attn_implementation"] = args.attn_implementation
      
     model = model_cls(
         args.model_name_or_path, 
