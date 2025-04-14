@@ -1033,6 +1033,7 @@ class VLLMModel(LLM):
         use_chat_template=False,
         system_message=None,
         seed=42,
+        tensor_parallel_size=1,
     ):
         super().__init__(
             model_name,
@@ -1052,7 +1053,7 @@ class VLLMModel(LLM):
         # there are some work arounds to this, but it may give unexpected results.
         self.model = LLM(
             model_name,
-            tensor_parallel_size=torch.cuda.device_count(),
+            tensor_parallel_size=tensor_parallel_size, #torch.cuda.device_count(),
             dtype="bfloat16",
             trust_remote_code=True,
             enforce_eager=True,
@@ -1280,6 +1281,7 @@ def load_LLM(args):
     elif args.use_vllm:
         model_cls = VLLMModel
         kwargs['seed'] = args.seed
+        kwargs['tensor_parallel_size'] = args.tensor_parallel_size
     elif args.use_tgi_or_vllm_serving:
         model_cls = TgiVllmModel
         kwargs['seed'] = args.seed
