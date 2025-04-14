@@ -969,8 +969,10 @@ class HFModel(LLM):
             if past_key_values is None:
                 self.disable_prefill = True
                 logger.warning("past key values is None, not able to prefill with KVs, disabling...")
-            else:
+            elif hasattr(prefill, "past_key_values"):
                 inputs = BatchEncoding({"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask, "past_key_values": past_key_values})
+            else:
+                inputs = BatchEncoding({"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask, "cache_params": past_key_values})
 
         torch.cuda.empty_cache()
         gc.collect()
