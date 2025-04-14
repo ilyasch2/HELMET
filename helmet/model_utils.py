@@ -965,8 +965,10 @@ class HFModel(LLM):
             else:
                 prefill = self.model.backbone(input_ids=inputs.input_ids[..., :-1], attention_mask=inputs.attention_mask[..., :-1], **extra)
             past_key_values = prefill.past_key_values if hasattr(prefill, "past_key_values") else prefill.cache_params
-            inputs = {"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask}
 
+            # inputs is an BatchEncoding object, that allows square brackets access and attribute-style access, e.g., inputs["attention_mask"] or inputs.attention_mask
+            inputs["attention_mask"] = inputs.attention_mask
+            
             if hasattr(prefill, "past_key_values"):
                 inputs["past_key_values"] = past_key_values
             else:
