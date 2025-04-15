@@ -965,18 +965,14 @@ class HFModel(LLM):
             else:
                 prefill = self.model.backbone(input_ids=inputs.input_ids[..., :-1], attention_mask=inputs.attention_mask[..., :-1], **extra)
             past_key_values = prefill.past_key_values if hasattr(prefill, "past_key_values") else prefill.cache_params
-            inputs = {"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask}
-
-            if hasattr(prefill, "past_key_values"):
-                inputs["past_key_values"] = past_key_values
-            else:
-                inputs["cache_params"] = past_key_values
 
             if past_key_values is None:
                 self.disable_prefill = True
                 logger.warning("past key values is None, not able to prefill with KVs, disabling...")
-            else:
+            elif hasattr(prefill, "past_key_values"):
                 inputs = BatchEncoding({"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask, "past_key_values": past_key_values})
+            else:
+                inputs = BatchEncoding({"input_ids": inputs.input_ids, "attention_mask": inputs.attention_mask, "cache_params": past_key_values})
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -1031,6 +1027,7 @@ class VLLMModel(LLM):
         use_chat_template=False,
         system_message=None,
         seed=42,
+        tensor_parallel_size=1,
     ):
         super().__init__(
             model_name,
@@ -1050,7 +1047,7 @@ class VLLMModel(LLM):
         # there are some work arounds to this, but it may give unexpected results.
         self.model = LLM(
             model_name,
-            tensor_parallel_size=torch.cuda.device_count(),
+            tensor_parallel_size=tensor_parallel_size, #torch.cuda.device_count(),
             dtype="bfloat16",
             trust_remote_code=True,
             enforce_eager=True,
@@ -1278,6 +1275,7 @@ def load_LLM(args):
     elif args.use_vllm:
         model_cls = VLLMModel
         kwargs['seed'] = args.seed
+        kwargs['tensor_parallel_size'] = args.tensor_parallel_size
     elif args.use_tgi_or_vllm_serving:
         model_cls = TgiVllmModel
         kwargs['seed'] = args.seed
