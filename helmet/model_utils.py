@@ -1028,6 +1028,7 @@ class VLLMModel(LLM):
         system_message=None,
         seed=42,
         tensor_parallel_size=1,
+        enforce_eager=True,
     ):
         super().__init__(
             model_name,
@@ -1045,15 +1046,20 @@ class VLLMModel(LLM):
         from vllm import LLM
         # at the time of testing: note that the max model length is derived from the config file, and if max_length is larger than that length, there will be an error. it appears that vllm does not support positional extrapolation
         # there are some work arounds to this, but it may give unexpected results.
+
+        # Sometimes HELMET passes str values for max-length, with "," inside (!)
+        if isinstance(max_length, str) and "," in max_length:
+            max_length = int(max_length.split(',')[0])
+      
         self.model = LLM(
             model_name,
             tensor_parallel_size=tensor_parallel_size, #torch.cuda.device_count(),
             dtype="bfloat16",
             trust_remote_code=True,
-            enforce_eager=True,
+            enforce_eager=enforce_eager,
             seed=seed,
             #max_seq_len_to_capture=max_length, # we cannot set unless we are using a constant max length for the run
-            max_model_len=max_length,
+            max_model_len=int(max_length),
         )
         self.tokenizer = self.model.get_tokenizer()
 
