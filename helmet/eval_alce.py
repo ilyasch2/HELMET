@@ -24,7 +24,7 @@ from transformers import (
     pipeline
 )
 
-from utils import normalize_answer, get_max_memory, remove_citations
+from .utils import normalize_answer, get_max_memory, remove_citations
 
 QA_MODEL="gaotianyu1350/roberta-large-squad"
 AUTOAIS_MODEL="google/t5_xxl_true_nli_mixture"
